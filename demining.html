@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <script src="https://unpkg.com/vue@2.4.2" charset="utf-8"></script>
+  <style media="screen">
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-size: Microsoft YaHei;
+    }
+    .container {
+      width: 486px;
+      height: 486px;
+      border: 1px solid #ddd;
+      margin: 20px auto 0;
+    }
+    .grid {
+      width: 100%;
+      height: 100%;
+      font-size: 0;
+      /*margin-top: -100%;*/
+    }
+    .line {
+      width: 100%;
+      height: 11.11111111%;
+    }
+    .littice {
+      width: calc(11.11111111% - 4px);
+      height: calc(100% - 4px);
+      display: inline-block;
+      margin: 2px;
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: 4px;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      vertical-align: top;
+
+      color: #e9e9e9;
+      border: solid 1px #555;
+      background: #6e6e6e;
+      background: -webkit-gradient(linear, left top, left bottom, from(#888), to(#575757));
+    }
+    .littice.open {
+      background: #ddd;
+      border-color: #999;
+      color: #292929;
+    }
+    .littice.mark {
+      background: #000;
+    }
+  </style>
+  <title>vue扫雷</title>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script type="text/javascript">
+    var littice = {
+      props: {
+        data: Object
+      },
+      template:
+      '<div class="littice" :class="stateClass" @click.stop="itemClick(\'open\')" @contextmenu.prevent="itemClick(\'mark\')">\
+        <span v-if="data.state === \'open\'">\
+          {{ data.isLandmine ? \'雷\' : data.round }}\
+        </span>\
+      </div>',
+      created: function() {
+      },
+      methods: {
+        itemClick: function(type) {
+          this.$emit('do', {
+            type,
+            data: this.data
+          });
+        }
+      },
+      computed: {
+        stateClass: function() {
+          switch (this.data.state) {
+            case 'open':
+              return 'open';
+              break;
+            case 'mark':
+              return 'mark';
+              break;
+            default:
+              return '';
+          }
+        }
+      }
+    };
+
+    new Vue({
+      el: '#app',
+      template:
+      '<div class="container">\
+        <div class="grid">\
+          <div class="line" v-for="(line, index) in data" :key="index">\
+            <littice v-for="(item, index) in line" :key="item.id" :data="item" @do="litticeClick" />\
+          </div>\
+        </div>\
+      </div>',
+      components: {
+        littice
+      },
+      created: function() {
+        this.init();
+      },
+      updated: function() {
+        console.log('updeted');
+      },
+      methods: {
+        // 初始化
+        init: function() {
+          var width = this.WIDTH;
+          var height = this.HEIGHT;
+          var landminenum = this.LANDMINENUM;
+          var position = this.createLandminePosition(width, height, landminenum);
+          position = this.landmineTip(width, height, position);
+
+          this.data = position;
+        },
+        // 生成地雷布局
+        createLandminePosition(width, height, landminenum) {
+          var litticenum = width * height;
+          var cache = [];
+          var position = [];
+
+          // 生成地雷数据
+          for(var i = 0;i < litticenum;i += 1) {
+            let item = {
+              isLandmine: false,
+              round: 0,
+              id: i,
+              state: 'close',
+              x: null,
+              y: null
+            };
+            if (i < landminenum) {
+              item.isLandmine = true;
+            } else {
+              item.isLandmine = false;
+            }
+
+            cache.push(item);
+          }
+
+          // 随机分开
+          cache.sort(function() {
+            return Math.random() - 0.5;
+          });
+
+          // 转换成二维数组
+          for (var i = 0;i < width;i += 1) {
+            position.push(cache.splice(0, height));
+          }
+
+          return position;
+        },
+
+        // 周围雷数提示并添加位置信息
+        landmineTip(width, height, position) {
+          for (var i = 0;i < width;i += 1) {
+            for (var j = 0;j < height; j += 1) {
+              let info = {
+                x: i,
+                y: j,
+                round: this.landmineRoundNum(i, j, position)
+              };
+              Object.assign(position[i][j], info);
+            }
+          }
+
+          return position;
+        },
+        // 格子周围的信息
+        litticeRound(x, y, position) {
+          var roundInfo = [];
+          for (var i = -1, l = 2;i < l;i += 1) {
+            for (var j = -1, n = 2;j < n;j += 1) {
+              if (position[x + i] && position[x + i][y + j] && (i !== 0 || j !== 0)) {
+                roundInfo.push(position[x + i][y + j]);
+              }
+            }
+          }
+          return roundInfo;
+        },
+
+        // 获得数组里的雷数
+        getLandmineNumFromArr(arr) {
+          var num = 0;
+          arr.forEach(function(e) {
+            if (e.isLandmine) {
+              num += 1;
+            }
+          });
+
+          return num;
+        },
+
+        // 单个格子周围的雷数
+        landmineRoundNum(x, y, position) {
+          if (position[x][y].isLandmine) {
+            return null;
+          } else {
+            var roundInfo = this.litticeRound(x, y, position);
+            return this.getLandmineNumFromArr(roundInfo);
+          }
+        },
+
+        litticeClick(info) {
+          switch (info.type) {
+            case 'open':
+              this.open(info.data);
+              break;
+            case 'mark':
+              this.mark(info.data);
+              break;
+            default:
+          }
+
+          if (info.data.isLandmine && info.type === 'open') {
+            alert('game over!');
+          } else if (this.remainLittice === 0) {
+            alert('you win!');
+          }
+        },
+
+        // 翻开
+        openItem(item) {
+          item.state = 'open';
+          this.data[item.x][item.y] = item;
+        },
+        // 标记
+        mark(item) {
+          item.state = 'mark';
+          this.data[item.x][item.y] = item;
+        },
+
+        // 打开
+        open(itemData) {
+          if (itemData.isLandmine) {
+            // 游戏结束
+            alert('game over!');
+            return;
+          } else if (itemData.round > 0) {
+            // 翻开
+            this.openItem(itemData);
+          } else if (itemData.round === 0) {
+            // debugger;
+            // 周围无雷
+            let position = this.data.concat();
+            // 待检测
+            let needDetect = [];
+            // 已检测
+            let detected = [];
+
+            needDetect.push(itemData);
+
+            while (needDetect.length > 0) {
+              let thisItem = needDetect[0];
+              if (thisItem.round > 0) {
+                this.openItem(thisItem);
+              } else if (thisItem.round === 0) {
+                this.openItem(thisItem);
+                let roundInfo = this.litticeRound(thisItem.x, thisItem.y, position);
+                roundInfo.forEach(function(e) {
+                  if(!needDetect.some(function(needDetectItem) {return needDetectItem.id === e.id;}) && !detected.some(function(detectedItem) {return detectedItem.id === e.id;})) {
+                    needDetect.push(e);
+                  }
+                });
+              } else {
+
+              }
+              detected.push(thisItem);
+              needDetect.shift();
+            }
+          }
+        }
+      },
+      computed: {
+        remainLittice: function() {
+          var num = 0;
+          for (var i = 0, l = this.data.length;i < l;i += 1) {
+            for (var j = 0, n = this.data[i].length;j < n;j += 1) {
+              if (this.data[i][j].state === 'close') {
+                num += 1;
+              }
+            }
+          }
+
+          return num;
+        }
+      },
+      data: function() {
+        return {
+          WIDTH: 9,
+          HEIGHT: 9,
+          LANDMINENUM: 5,
+          data: null
+        };
+      }
+    });
+  </script>
+</body>
+</html>
