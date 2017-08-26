@@ -2,67 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=650px, user-scalable=no">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <script src="https://unpkg.com/vue@2.4.2" charset="utf-8"></script>
-  <style media="screen">
-    * {
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-size: Microsoft YaHei;
-    }
-    .container {
-      width: 486px;
-      height: 486px;
-      border: 1px solid #ddd;
-      margin: 20px auto 0;
-    }
-    .grid {
-      width: 100%;
-      height: 100%;
-      font-size: 0;
-      /*margin-top: -100%;*/
-    }
-    .line {
-      width: 100%;
-      height: 11.11111111%;
-    }
-    .littice {
-      width: calc(11.11111111% - 4px);
-      height: calc(100% - 4px);
-      display: inline-block;
-      margin: 2px;
-      cursor: pointer;
-      font-size: 14px;
-      border-radius: 4px;
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      box-sizing: border-box;
-      vertical-align: top;
-
-      color: #e9e9e9;
-      border: solid 1px #555;
-      background: #6e6e6e;
-      background: -webkit-gradient(linear, left top, left bottom, from(#888), to(#575757));
-    }
-    .littice.open {
-      background: #ddd;
-      border-color: #999;
-      color: #292929;
-    }
-    .littice.mark {
-      background: #000;
-    }
-  </style>
+  <link rel="stylesheet" href="./icon-font/iconfont.css">
+  <link rel="stylesheet" href="./main.css">
   <title>vue扫雷</title>
 </head>
 <body>
   <div id="app"></div>
 
   <script type="text/javascript">
+    var menu = {
+
+    };
     var littice = {
       props: {
         data: Object
@@ -70,8 +23,10 @@
       template:
       '<div class="littice" :class="stateClass" @click.stop="itemClick(\'open\')" @contextmenu.prevent="itemClick(\'mark\')">\
         <span v-if="data.state === \'open\'">\
-          {{ data.isLandmine ? \'雷\' : data.round }}\
+          <i v-if="data.isLandmine" class="iconfont">&#xe605;</i>\
+          <span v-else-if="data.round > 0">{{ data.round }}</span>\
         </span>\
+        <i v-else-if="data.state === \'mark\'" class="iconfont">&#xe697;</i>\
       </div>',
       created: function() {
       },
@@ -87,6 +42,9 @@
         stateClass: function() {
           switch (this.data.state) {
             case 'open':
+              if (this.data.round === 0) {
+                return 'safetyZone';
+              }
               return 'open';
               break;
             case 'mark':
@@ -242,17 +200,17 @@
         },
         // 标记
         mark(item) {
-          item.state = 'mark';
+          if (item.state === 'mark') {
+            item.state = 'close';
+          } else if (item.state === 'close') {
+            item.state = 'mark';
+          }
           this.data[item.x][item.y] = item;
         },
 
         // 打开
         open(itemData) {
-          if (itemData.isLandmine) {
-            // 游戏结束
-            alert('game over!');
-            return;
-          } else if (itemData.round > 0) {
+          if (itemData.round > 0) {
             // 翻开
             this.openItem(itemData);
           } else if (itemData.round === 0) {
@@ -305,7 +263,7 @@
         return {
           WIDTH: 9,
           HEIGHT: 9,
-          LANDMINENUM: 5,
+          LANDMINENUM: 12,
           data: null
         };
       }
